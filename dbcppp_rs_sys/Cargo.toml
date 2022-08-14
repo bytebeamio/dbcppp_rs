@@ -1,0 +1,10 @@
+[package]
+name = "dbcppp_rs_sys"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[build-dependencies]
+bindgen = "0.60.1"
+cmake = "0.1.48"

@@ -3,16 +3,10 @@ use std::path::PathBuf;
 
 fn main() {
     let dbcppp = "../dbcppp";
-    let dst = cmake::Config::new(dbcppp)
-        .define("BUILD_STATIC_LIBS", "ON")
-        .define("BUILD_SHARED_LIBS", "OFF")
-        .define("BUILD_TESTING", "OFF")
-        .cxxflag("-lstdc++")
-        .always_configure(true)
-        .build();
+    let dst = cmake::Config::new(dbcppp).build();
     println!("cargo:rustc-link-search=native={}/build/src/libdbcppp", dst.display());
     println!("cargo:rustc-link-lib=static=dbcppp");
-    println!("cargo:rustc-link-arg=-lstdc++");
+    println!("cargo:rustc-link-lib=stdc++");
 
     let header = format!("{}/include/dbcppp/CApi.h", dbcppp);
     println!("cargo:rerun-if-changed={}", header);

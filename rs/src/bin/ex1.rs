@@ -23,6 +23,7 @@ unsafe fn f() {
     );
     if dbc == null() {
         println!("invalid dbc file");
+        return;
     }
     for msg in (0..dbcppp_NetworkMessages_Size(dbc))
         .map(|idx| dbcppp_NetworkMessages_Get(dbc, idx)) {

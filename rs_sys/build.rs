@@ -2,7 +2,8 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    let dst = cmake::Config::new("..")
+    let dbcppp = "../dbcppp";
+    let dst = cmake::Config::new(dbcppp)
         .define("BUILD_STATIC_LIBS", "ON")
         .define("BUILD_SHARED_LIBS", "OFF")
         .define("BUILD_TESTING", "OFF")
@@ -13,7 +14,7 @@ fn main() {
     println!("cargo:rustc-link-lib=static=dbcppp");
     println!("cargo:rustc-link-arg=-lstdc++");
 
-    let header = "../include/dbcppp/CApi.h";
+    let header = format!("{}/include/dbcppp/CApi.h", dbcppp);
     println!("cargo:rerun-if-changed={}", header);
     let bindings = bindgen::Builder::default()
         .header(header)

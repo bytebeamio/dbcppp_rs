@@ -1,5 +1,5 @@
 [workspace]
 members = [
-    "dbcppp_rs_sys",
-    "dbcppp_rs"
+    "rs_sys",
+    "rs"
 ]

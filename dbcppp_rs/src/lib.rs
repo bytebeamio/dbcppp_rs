@@ -1,8 +1,12 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
+use dbcppp_rs_sys::*;
+
+pub struct Dbc {
+}
+
+impl Dbc {
+    pub fn load(bytes: &[u8]) -> Result<Dbc, String> {
+        Ok(Dbc)
     }
+
+
 }

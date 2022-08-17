@@ -1,6 +1,7 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
-use anyhow::Result;
+use std::ptr::null;
+use anyhow::{Error, Result};
 
 pub trait TryToString {
     fn try_to_string(&self) -> Result<String>;
@@ -21,5 +22,18 @@ pub trait TryToCString {
 impl TryToCString for &str {
     fn try_to_cstring(&self) -> Result<CString> {
         Ok(CString::new(self.as_bytes())?.into_owned())
+    }
+}
+
+pub trait NullAssert {
+    fn non_null(self) -> Result<Self>;
+}
+
+impl<T> NullAssert for *const T {
+    fn non_null(self) -> Result<Self> {
+        if self == null() {
+            return Err(Error::msg(format!("")));
+        }
+        Ok(self)
     }
 }

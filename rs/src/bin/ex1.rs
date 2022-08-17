@@ -1,6 +1,8 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::ptr::null;
+use dbcppp_rs::CanProcessor;
+use dbcppp_rs::dbc::Dbc;
 use dbcppp_rs_sys::*;
 
 fn str_to_cstring(s: &str) -> CString {
@@ -18,15 +20,7 @@ fn main() {
 }
 
 unsafe fn f() {
-    let dbc = dbcppp_NetworkLoadDBCFromFile(
-        str_to_cstring("./my.tmp.dir/test.dbc").as_ptr(),
-    );
-    if dbc == null() {
-        println!("invalid dbc file");
-        return;
-    }
-    for msg in (0..dbcppp_NetworkMessages_Size(dbc))
-        .map(|idx| dbcppp_NetworkMessages_Get(dbc, idx)) {
-        println!("{}: {}", chars_to_string(dbcppp_MessageName(msg)), dbcppp_MessageId(msg));
-    }
+    let data = std::fs::read_to_string("./my.tmp.dir/test.dbc").unwrap();
+    let dbc = CanProcessor::from_dbc(data.as_str()).unwrap();
+    dbg!(dbc);
 }

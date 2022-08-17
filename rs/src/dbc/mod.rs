@@ -4,16 +4,19 @@ use anyhow::{Result, Context, Error};
 use dbcppp_rs_sys::*;
 use crate::TryToString;
 
+#[derive(Debug)]
 pub struct Dbc {
     messages: Vec<Message>,
 }
 
+#[derive(Debug)]
 pub struct Message {
     pub id: u64,
     pub name: String,
     pub signals: Vec<Signal>,
 }
 
+#[derive(Debug)]
 pub struct Signal {
     pub name: String,
     pub unit: String,
@@ -24,12 +27,14 @@ pub struct Signal {
     pub ex_mux_parent: Option<ExMuxInfo>,
 }
 
+#[derive(Debug)]
 pub enum SignalMuxFlag {
     NoMux,
-    MuxSwitch,
-    MuxValue,
+    Switch,
+    Value,
 }
 
+#[derive(Debug)]
 pub struct ExMuxInfo {
     pub switch: String,
     pub ranges: Vec<dbcppp_ValueRange>,
@@ -112,8 +117,8 @@ impl Signal {
 
             let mux_flag = match dbcppp_SignalMultiplexerIndicator(raw) {
                 0 => SignalMuxFlag::NoMux,
-                1 => SignalMuxFlag::MuxSwitch,
-                2 => SignalMuxFlag::MuxValue,
+                1 => SignalMuxFlag::Switch,
+                2 => SignalMuxFlag::Value,
                 _ => return Err(Error::msg(format!("invalid signal({name})")))
             };
 

@@ -8,18 +8,45 @@ pub struct Dbc {
     messages: Vec<Message>,
 }
 
+pub struct Message {
+    pub id: u64,
+    pub name: String,
+    pub signals: Vec<Signal>,
+}
+
+pub struct Signal {
+    pub name: String,
+    pub unit: String,
+    pub comment: String,
+    pub enum_map: HashMap<u64, String>,
+    pub mux_flag: SignalMuxFlag,
+    pub mux_value: u64,
+    pub ex_mux_parent: Option<ExMuxInfo>,
+}
+
+pub enum SignalMuxFlag {
+    NoMux,
+    MuxSwitch,
+    MuxValue,
+}
+
+pub struct ExMuxInfo {
+    pub switch: String,
+    pub ranges: Vec<dbcppp_ValueRange>,
+}
+
 impl Dbc {
     pub fn new(raw: *const dbcppp_Network) -> Result<Dbc> {
         unsafe {
             let mut messages = Vec::new();
-            for msg in (0..dbcppp_NetworkMessages_Size(raw))
-                .map(|idx| dbcppp_NetworkMessages_Get(raw, idx)) {
+            for idx in 0..dbcppp_NetworkMessages_Size(raw) {
+                let msg= dbcppp_NetworkMessages_Get(raw, idx);
                 if msg == null() {
                     return Err(Error::msg(format!("message #{idx} is null")));
                 }
 
                 messages.push(Message::new(msg)
-                    .with_context(|| format!("message #{idx} is invalid"))?);
+                .with_context(|| format!("message #{idx} is invalid"))?);
             }
 
             Ok(Dbc {
@@ -29,11 +56,6 @@ impl Dbc {
     }
 }
 
-pub struct Message {
-    pub id: u64,
-    pub name: String,
-    pub signals: Vec<Signal>,
-}
 
 impl Message {
     pub fn new(raw: *const dbcppp_Message) -> Result<Message> {
@@ -62,29 +84,6 @@ impl Message {
     }
 }
 
-pub enum SignalMuxFlag {
-    NoMux,
-    MuxSwitch,
-    MuxValue,
-}
-
-pub struct ExMuxInfo {
-    pub switch: String,
-    /// inclusive range
-    pub min_val: u64,
-    pub max_val: u64,
-}
-
-pub struct Signal {
-    pub name: String,
-    pub unit: String,
-    pub comment: String,
-    pub enum_map: HashMap<u64, String>,
-    pub mux_flag: SignalMuxFlag,
-    pub mux_value: u64,
-    pub ex_mux_parent: Option<ExMuxInfo>,
-}
-
 impl Signal {
     pub fn new(raw: *const dbcppp_Signal) -> Result<Signal> {
         unsafe {
@@ -93,10 +92,10 @@ impl Signal {
                 .context("invalid name")?;
             let unit = dbcppp_SignalUnit(raw)
                 .try_to_string()
-                .context("invalid name")?;
+                .context("invalid unit")?;
             let comment = dbcppp_SignalComment(raw)
                 .try_to_string()
-                .context("invalid name")?;
+                .context("invalid comment")?;
 
             let mut enum_map = HashMap::new();
             for idx in 0..dbcppp_SignalValueEncodingDescriptions_Size(raw) {
@@ -125,10 +124,20 @@ impl Signal {
                 return Err(Error::msg("signal has more than one extended multiplexer parents"));
             } else if ex_mux_count == 1 {
                 let mux_parent = dbcppp_SignalMultiplexerValues_Get(raw, 0);
+                let switch = dbcppp_SignalMultiplexerValue_SwitchName(mux_parent).try_to_string()
+                    .with_context(|| format!("invalid signal({name})"))?;
+                let ranges_count = dbcppp_SignalMultiplexerValue_ValueRanges_Size(mux_parent);
+                let mut ranges = Vec::with_capacity(ranges_count as _);
+                for idx in 0..ranges_count {
+                    let range_ptr = dbcppp_SignalMultiplexerValue_ValueRanges_Get(mux_parent, idx);
+                    if range_ptr == null() {
+                        return Err(Error::msg(format!("invalid signal({name})")));
+                    }
+                    ranges.push((&*range_ptr).clone());
+                }
                 Some(ExMuxInfo {
-                    switch: "".to_string(),
-                    min_val: 0,
-                    max_val: 0
+                    switch,
+                    ranges
                 })
             } else {
                 None

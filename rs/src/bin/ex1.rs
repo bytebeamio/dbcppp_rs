@@ -19,7 +19,7 @@ fn main() {
 
 unsafe fn f() {
     let dbc = dbcppp_NetworkLoadDBCFromFile(
-        str_to_cstring("../my.tmp.dir/test.dbc").as_ptr(),
+        str_to_cstring("./my.tmp.dir/test.dbc").as_ptr(),
     );
     if dbc == null() {
         println!("invalid dbc file");

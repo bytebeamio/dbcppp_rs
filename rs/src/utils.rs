@@ -21,19 +21,7 @@ pub trait TryToCString {
 
 impl TryToCString for &str {
     fn try_to_cstring(&self) -> Result<CString> {
-        Ok(CString::new(self.as_bytes())?.into_owned())
+        Ok(CString::new(self.as_bytes())?)
     }
 }
 
-pub trait NullAssert {
-    fn non_null(self) -> Result<Self>;
-}
-
-impl<T> NullAssert for *const T {
-    fn non_null(self) -> Result<Self> {
-        if self == null() {
-            return Err(Error::msg(format!("")));
-        }
-        Ok(self)
-    }
-}

@@ -1,7 +1,6 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
-use std::ptr::null;
-use anyhow::{Error, Result};
+use anyhow::Result;
 
 pub trait TryToString {
     fn try_to_string(&self) -> Result<String>;
@@ -15,13 +14,19 @@ impl TryToString for *const c_char {
     }
 }
 
-pub trait TryToCString {
+pub trait StrHelpers {
     fn try_to_cstring(&self) -> Result<CString>;
+    fn ascii(&self) -> String;
 }
 
-impl TryToCString for &str {
+impl StrHelpers for &str {
     fn try_to_cstring(&self) -> Result<CString> {
         Ok(CString::new(self.as_bytes())?)
     }
-}
 
+    fn ascii(&self) -> String {
+        self.chars()
+            .map(|uc| if uc.is_ascii() { uc } else { '_' })
+            .collect::<String>()
+    }
+}

@@ -7,7 +7,7 @@ use bitfield::bitfield;
 use crate::dbc::Dbc;
 use crate::utils::TryToString;
 
-mod utils;
+pub mod utils;
 pub mod dbc;
 
 #[derive(Debug)]

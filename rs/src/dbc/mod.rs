@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::ptr::null;
-use anyhow::{Result, Context, Error};
+use anyhow::{Context, Error, Result};
 use dbcppp_rs_sys::*;
+use crate::decision_tree::{create_decision_tree, Decision, MuxSignal};
 use crate::TryToString;
 
 #[derive(Debug)]
@@ -14,6 +15,8 @@ pub struct Message {
     pub id: u64,
     pub name: String,
     pub signals: Vec<Signal>,
+    pub no_mux_signals: Vec<u64>,
+    pub decision_tree: Vec<MuxSignal>,
 }
 
 #[derive(Debug)]
@@ -27,7 +30,7 @@ pub struct Signal {
     pub ex_mux_parent: Option<ExMuxInfo>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum SignalMuxFlag {
     NoMux,
     Switch,
@@ -45,13 +48,13 @@ impl Dbc {
         unsafe {
             let mut messages = Vec::new();
             for idx in 0..dbcppp_NetworkMessages_Size(raw) {
-                let msg= dbcppp_NetworkMessages_Get(raw, idx);
+                let msg = dbcppp_NetworkMessages_Get(raw, idx);
                 if msg == null() {
                     return Err(Error::msg(format!("message #{idx} is null")));
                 }
 
                 messages.push(Message::new(msg)
-                .with_context(|| format!("message #{idx} is invalid"))?);
+                    .with_context(|| format!("message #{idx} is invalid"))?);
             }
 
             Ok(Dbc {
@@ -71,19 +74,27 @@ impl Message {
 
             let signals_count = dbcppp_MessageSignals_Size(raw);
             let mut signals = Vec::with_capacity(signals_count as _);
+            let mut no_mux_signals = Vec::with_capacity(signals_count as _);
             for idx in 0..signals_count {
                 let sig = dbcppp_MessageSignals_Get(raw, idx);
                 if sig == null() {
                     return Err(Error::msg(format!("signal #{idx} is null")));
                 }
 
-                signals.push(Signal::new(sig)
-                    .with_context(|| format!("signal #{idx} is invalid"))?);
+                let sig = Signal::new(sig)
+                    .with_context(|| format!("signal #{idx} is invalid"))?;
+                if sig.mux_flag == SignalMuxFlag::NoMux {
+                    no_mux_signals.push(idx);
+                }
+                signals.push(sig);
             }
+
             Ok(Message {
                 id,
                 name,
-                signals
+                signals,
+                no_mux_signals,
+                decision_tree,
             })
         }
     }
@@ -142,7 +153,7 @@ impl Signal {
                 }
                 Some(ExMuxInfo {
                     switch,
-                    ranges
+                    ranges,
                 })
             } else {
                 None
@@ -155,7 +166,7 @@ impl Signal {
                 enum_map,
                 mux_flag,
                 mux_value,
-                ex_mux_parent
+                ex_mux_parent,
             })
         }
     }

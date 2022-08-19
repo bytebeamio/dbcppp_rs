@@ -2,8 +2,7 @@ use std::collections::HashMap;
 use std::ptr::null;
 use anyhow::{Context, Error, Result};
 use dbcppp_rs_sys::*;
-use crate::decision_tree::{create_decision_tree, Decision, MuxSignal};
-use crate::{CanValue, TryToString};
+use crate::TryToString;
 
 #[derive(Debug, Clone)]
 pub struct Dbc {

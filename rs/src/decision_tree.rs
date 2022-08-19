@@ -1,6 +1,5 @@
-use std::collections::HashSet;
 use anyhow::{Result, Error};
-use crate::dbc::{Signal, SignalMuxFlag};
+use crate::dbc::SignalMuxFlag;
 use crate::Message;
 
 /// All the indexes in these structs point to the signals array of owning message
@@ -93,7 +92,7 @@ pub fn create_simple_decision_tree(msg: &Message) -> Result<DecisionTree> {
     Ok(result)
 }
 
-pub fn create_extended_decision_tree(msg: &Message) -> Result<DecisionTree> {
+pub fn create_extended_decision_tree(_msg: &Message) -> Result<DecisionTree> {
 //     let multiplexers = HashSet::new();
 //     let
     Err(Error::msg(""))

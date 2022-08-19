@@ -1,3 +1,4 @@
+#![allow(unused_macros)]
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use anyhow::Result;
@@ -30,3 +31,13 @@ impl StrHelpers for &str {
             .collect::<String>()
     }
 }
+
+macro_rules! time {
+    ($e:expr) => {{
+        let start = std::time::Instant::now();
+        let result = $e;
+        println!("{:?}", start.elapsed());
+        result
+    }}
+}
+

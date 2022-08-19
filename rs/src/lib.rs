@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 use std::ffi::CString;
-use std::ptr::null;
 use dbcppp_rs_sys::*;
 use anyhow::{Context, Error, Result};
-use bitfield::bitfield;
-use crate::dbc::{Dbc, ExMuxInfo, Message, Signal, SignalMuxFlag};
-use crate::decision_tree::create_decision_tree;
+use crate::dbc::{Dbc, Message, Signal, SignalMuxFlag};
 use crate::utils::TryToString;
 
 pub mod utils;
@@ -64,7 +61,6 @@ pub struct MessageProcessor {
 
 impl MessageProcessor {
     pub fn new(inner: Message) -> Result<MessageProcessor> {
-        let decision_tree = create_decision_tree(&inner);
         Ok(MessageProcessor {
             inner
         })

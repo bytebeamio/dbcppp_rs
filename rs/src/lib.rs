@@ -4,7 +4,7 @@ use std::ptr::null;
 use dbcppp_rs_sys::*;
 use anyhow::{Context, Error, Result};
 use bitfield::bitfield;
-use crate::dbc::{Dbc, Message, Signal, SignalMuxFlag};
+use crate::dbc::{Dbc, ExMuxInfo, Message, Signal, SignalMuxFlag};
 use crate::decision_tree::create_decision_tree;
 use crate::utils::TryToString;
 
@@ -30,10 +30,10 @@ impl CanProcessor {
         let dbc = Dbc::new(inner)?;
 
         let mut message_processors = HashMap::new();
-        for msg in dbc.messages {
+        for msg in dbc.messages.iter() {
             message_processors.insert(
                 msg.id,
-                MessageProcessor::new(msg)
+                MessageProcessor::new(msg.clone())
                     .context(format!("Failed to initialize processor for message: {:?} | {}", msg.name, msg.id))?,
             );
         }
@@ -75,112 +75,54 @@ impl MessageProcessor {
             return Err(Error::msg(format!("payload size ({}) is smaller than the message size ({})", payload.len(), self.inner.payload_size)));
         }
 
-        let mux_sig = self.inner.mux_sig();
-
         let mut result = HashMap::new();
         for sig in self.inner.signals.iter() {
             if sig.mux_flag != SignalMuxFlag::Value {
-                result.insert(sig.name.clone(), self.decode_signal(sig, payload));
-            } else if mux_sig.is_some() && self.decode_signal(mux_sig.unwrap(), payload) == sig.mux_value {
-                result.insert(sig.name.clone(), self.decode_signal(sig, payload));
+                result.insert(sig.name.clone(), sig.decode(payload));
+            } else if self.inner.mux_sig.is_some()
+                && sig.ex_mux_parent.is_none()
+                && self.inner.mux_sig.as_ref().unwrap().decode(payload) == sig.mux_value
+            {
+                result.insert(sig.name.clone(), sig.decode(payload));
             } else {
                 // TODO: decode ex mux
+                if self.all_multiplexers_valid(sig, payload) {
+                    result.insert(sig.name.clone(), sig.decode(payload));
+                }
             }
         }
         Ok(result)
     }
 
-    fn decode_signal(&self, sig: &Signal, payload: &[u8]) -> CanValue {
-        0
+    fn all_multiplexers_valid(&self, sig: &Signal, payload: &[u8]) -> bool {
+        match sig.ex_mux_parent.as_ref() {
+            None => {
+                return false;
+            }
+            Some(par_info) => {
+                match self.inner.signals.iter().find(|sig| sig.name == par_info.switch) {
+                    None => {
+                        return false;
+                    }
+                    Some(par_sig) => {
+                        let par_value = par_sig.decode(payload);
+                        for range in par_info.ranges.iter() {
+                            if par_value >= range.from && par_value <= range.to {
+                                if par_sig.ex_mux_parent.is_some() {
+                                    return self.all_multiplexers_valid(par_sig, payload);
+                                } else {
+                                    return true;
+                                }
+                            } else {
+                                return false;
+                            }
+                        }
+                        return false;
+                    }
+                }
+            }
+        }
     }
 }
 
 type CanValue = u64;
-
-// #[derive(Debug, Clone, Eq, PartialEq)]
-// pub struct CanValue<'a> {
-//     pub numeric_value: f64,
-//     pub unit: Option<&'a str>,
-//     pub enum_repr: Option<&'a str>,
-// }
-
-// #[derive(Debug)]
-// pub struct MessageProcessor {
-//     /// lifetime tied to parent struct, DO NOT COPY
-//     inner: *const dbcppp_Message,
-//     pub name: String,
-//     /// parser implementation identifies signals using indexes in these vectors
-//     signals: Vec<*const dbcppp_Signal>,
-//     signal_names: Vec<String>,
-//     signal_units: Vec<String>,
-//     signal_comments: Vec<String>,
-//     /// To be decoded unconditionally
-//     no_mux_signals: Vec<usize>,
-//     /// walk this decision tree and add all enabled signals
-//     top_mux_signals: Vec<MuxSignal>,
-// }
-//
-// impl MessageProcessor {
-//     pub unsafe fn new(msg: *const dbcppp_Message) -> Result<MessageProcessor> {
-//         let name = dbcppp_MessageName(msg).try_to_string()?;
-//
-//         let signals_count = dbcppp_MessageSignals_Size(msg);
-//         let mut signals = Vec::with_capacity(signals_count as usize);
-//         let mut signal_multiplexers = Vec::with_capacity(signals_count as usize);
-//         let mut signals_revindex = HashMap::new();
-//         let mut no_mux_signals = Vec::new();
-//         for idx in 0..signals_count {
-//             let sig = dbcppp_MessageSignals_Get(msg, idx);
-//             let name = dbcppp_SignalName(sig).try_to_string()
-//                 .context(format!("signal #{idx} in message {:?} is malformed", name))?;
-//             signals.push(sig);
-//             signals_revindex.insert(name, idx);
-//         }
-//
-//         Ok(MessageProcessor {
-//             inner: msg,
-//             name,
-//         })
-//     }
-//
-//     pub fn parse_frame(&self, payload: &[u8]) -> HashMap<String, CanValue> {
-//
-//     }
-// }
-//
-// #[derive(Debug, Clone)]
-// pub struct CanValue<'a> {
-//     pub numeric_value: f64,
-//     pub unit: Option<&'a str>,
-//     pub enum_repr: Option<&'a str>,
-// }
-//
-// #[derive(Debug)]
-// pub struct MuxSignal {
-//     /// index into the signals array of MessageProcessor owning this tree
-//     multiplexer_signal: usize,
-//     decisions: Vec<Decision>,
-// }
-//
-// #[derive(Debug)]
-// pub struct Decision {
-//     /// inclusive range
-//     min_val: f64,
-//     max_val: f64,
-//     /// The signal that this decision will enable
-//     target_signal: MuxSignal,
-// }
-//
-// #[derive(Debug)]
-// pub struct SignalProcessor {
-//     inner: *const dbcppp_Signal,
-// }
-//
-// impl SignalProcessor {
-//     pub unsafe fn new(sig: *const dbcppp_Signal) -> Result<SignalProcessor> {
-//         let name = dbcppp_SignalName(sig).try_to_string()?;
-//         Ok(SignalProcessor {
-//             inner: sig,
-//         })
-//     }
-// }

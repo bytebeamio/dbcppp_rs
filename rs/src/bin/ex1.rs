@@ -24,5 +24,5 @@ macro_rules! time {
 unsafe fn f() {
     let data = std::fs::read_to_string("./my.tmp.dir/test.dbc").unwrap().as_str().ascii();
     let dbc = CanProcessor::from_dbc(data.as_str()).unwrap();
-    dbg!(dbc);
+    dbg!(&dbc.dbc);
 }

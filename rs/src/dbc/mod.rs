@@ -3,24 +3,25 @@ use std::ptr::null;
 use anyhow::{Context, Error, Result};
 use dbcppp_rs_sys::*;
 use crate::decision_tree::{create_decision_tree, Decision, MuxSignal};
-use crate::TryToString;
+use crate::{CanValue, TryToString};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Dbc {
     pub raw: *const dbcppp_Network,
     pub messages: Vec<Message>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Message {
     pub raw: *const dbcppp_Message,
     pub id: u64,
     pub name: String,
     pub signals: Vec<Signal>,
     pub payload_size: u64,
+    pub mux_sig: Option<Signal>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Signal {
     pub raw: *const dbcppp_Signal,
     pub name: String,
@@ -32,14 +33,14 @@ pub struct Signal {
     pub ex_mux_parent: Option<ExMuxInfo>,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum SignalMuxFlag {
     NoMux,
     Switch,
     Value,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExMuxInfo {
     pub switch: String,
     pub ranges: Vec<dbcppp_ValueRange>,
@@ -76,6 +77,8 @@ impl Message {
                 .with_context(|| format!("Message({id}): invalid name"))?;
             let payload_size = dbcppp_MessageMessageSize(raw);
 
+            let mut mux_sig = None;
+
             let signals_count = dbcppp_MessageSignals_Size(raw);
             let mut signals = Vec::with_capacity(signals_count as _);
             for idx in 0..signals_count {
@@ -87,6 +90,10 @@ impl Message {
                 let sig = Signal::new(sig)
                     .with_context(|| format!("signal #{idx} is invalid"))?;
 
+                if sig.mux_flag == SignalMuxFlag::Switch {
+                    mux_sig = Some(sig.clone());
+                }
+
                 signals.push(sig);
             }
 
@@ -96,13 +103,9 @@ impl Message {
                 name,
                 payload_size,
                 signals,
+                mux_sig,
             })
         }
-    }
-
-    pub fn mux_sig(&self) -> Option<&Signal> {
-        self.signals.iter()
-            .find(|s| s.mux_flag == SignalMuxFlag::Switch)
     }
 }
 
@@ -176,5 +179,9 @@ impl Signal {
                 ex_mux_parent,
             })
         }
+    }
+
+    pub fn decode(&self, payload: &[u8]) -> u64 {
+        unsafe { dbcppp_SignalDecode(self.raw, payload.as_ptr() as _) }
     }
 }

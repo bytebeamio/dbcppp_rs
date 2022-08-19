@@ -4,7 +4,7 @@ use std::ptr::null;
 use dbcppp_rs_sys::*;
 use anyhow::{Context, Error, Result};
 use bitfield::bitfield;
-use crate::dbc::{Dbc, Message};
+use crate::dbc::{Dbc, Message, Signal, SignalMuxFlag};
 use crate::decision_tree::create_decision_tree;
 use crate::utils::TryToString;
 
@@ -17,7 +17,7 @@ pub struct CanProcessor {
     inner: *const dbcppp_Network,
     /// This field can be used to query the schema of data that will be generated when a can frame is processed
     pub dbc: Dbc,
-    message_processors: HashMap<u64, MessageProcessors>,
+    message_processors: HashMap<u64, MessageProcessor>,
 }
 
 impl CanProcessor {
@@ -46,9 +46,9 @@ impl CanProcessor {
     }
 
     pub fn decode_frame(&self, id: u64, payload: &[u8]) -> Result<HashMap<String, CanValue>> {
-        self.message_processors.get(&id)
-            .ok_or(Error::msg("Invalid can id"))
-            .and_then(|processor| processor.parse_frame(payload))
+        let msg = self.message_processors.get(&id)
+            .ok_or(Error::msg("Invalid can id"))?;
+        msg.parse_frame(payload)
     }
 }
 
@@ -69,8 +69,40 @@ impl MessageProcessor {
             inner
         })
     }
+
+    pub fn parse_frame(&self, payload: &[u8]) -> Result<HashMap<String, CanValue>> {
+        if self.inner.payload_size > payload.len() as _ {
+            return Err(Error::msg(format!("payload size ({}) is smaller than the message size ({})", payload.len(), self.inner.payload_size)));
+        }
+
+        let mux_sig = self.inner.mux_sig();
+
+        let mut result = HashMap::new();
+        for sig in self.inner.signals.iter() {
+            if sig.mux_flag != SignalMuxFlag::Value {
+                result.insert(sig.name.clone(), self.decode_signal(sig, payload));
+            } else if mux_sig.is_some() && self.decode_signal(mux_sig.unwrap(), payload) == sig.mux_value {
+                result.insert(sig.name.clone(), self.decode_signal(sig, payload));
+            } else {
+                // TODO: decode ex mux
+            }
+        }
+        Ok(result)
+    }
+
+    fn decode_signal(&self, sig: &Signal, payload: &[u8]) -> CanValue {
+        0
+    }
 }
 
+type CanValue = u64;
+
+// #[derive(Debug, Clone, Eq, PartialEq)]
+// pub struct CanValue<'a> {
+//     pub numeric_value: f64,
+//     pub unit: Option<&'a str>,
+//     pub enum_repr: Option<&'a str>,
+// }
 
 // #[derive(Debug)]
 // pub struct MessageProcessor {

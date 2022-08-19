@@ -94,6 +94,7 @@ pub fn create_simple_decision_tree(msg: &Message) -> Result<DecisionTree> {
 }
 
 pub fn create_extended_decision_tree(msg: &Message) -> Result<DecisionTree> {
-    let multiplexers = HashSet::new();
-    let
+//     let multiplexers = HashSet::new();
+//     let
+    Err(Error::msg(""))
 }

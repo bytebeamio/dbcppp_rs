@@ -17,6 +17,7 @@ pub struct Message {
     pub id: u64,
     pub name: String,
     pub signals: Vec<Signal>,
+    pub payload_size: u64,
 }
 
 #[derive(Debug)]
@@ -73,6 +74,7 @@ impl Message {
             let id = dbcppp_MessageId(raw);
             let name = dbcppp_MessageName(raw).try_to_string()
                 .with_context(|| format!("Message({id}): invalid name"))?;
+            let payload_size = dbcppp_MessageMessageSize(raw);
 
             let signals_count = dbcppp_MessageSignals_Size(raw);
             let mut signals = Vec::with_capacity(signals_count as _);
@@ -84,6 +86,7 @@ impl Message {
 
                 let sig = Signal::new(sig)
                     .with_context(|| format!("signal #{idx} is invalid"))?;
+
                 signals.push(sig);
             }
 
@@ -91,9 +94,15 @@ impl Message {
                 raw,
                 id,
                 name,
+                payload_size,
                 signals,
             })
         }
+    }
+
+    pub fn mux_sig(&self) -> Option<&Signal> {
+        self.signals.iter()
+            .find(|s| s.mux_flag == SignalMuxFlag::Switch)
     }
 }
 

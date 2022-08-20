@@ -6,13 +6,11 @@ use crate::TryToString;
 
 #[derive(Debug, Clone)]
 pub struct Dbc {
-    pub raw: *const dbcppp_Network,
     pub messages: Vec<Message>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Message {
-    pub raw: *const dbcppp_Message,
     pub id: u64,
     pub name: String,
     pub signals: Vec<Signal>,
@@ -60,7 +58,6 @@ impl Dbc {
             }
 
             Ok(Dbc {
-                raw,
                 messages
             })
         }
@@ -97,7 +94,6 @@ impl Message {
             }
 
             Ok(Message {
-                raw,
                 id,
                 name,
                 payload_size,
@@ -180,7 +176,15 @@ impl Signal {
         }
     }
 
-    pub fn decode(&self, payload: &[u8]) -> u64 {
-        unsafe { dbcppp_SignalDecode(self.raw, payload.as_ptr() as _) }
+    pub fn decode_raw(&self, payload: &[u8]) -> u64 {
+        unsafe {
+            dbcppp_SignalDecode(self.raw, payload.as_ptr() as _)
+        }
+    }
+
+    pub fn raw_to_phys(&self, raw: u64) -> f64 {
+        unsafe {
+            dbcppp_SignalRawToPhys(self.raw, raw)
+        }
     }
 }

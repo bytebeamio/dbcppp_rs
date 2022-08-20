@@ -12,8 +12,7 @@ pub mod decision_tree;
 pub struct CanProcessor {
     /// lifetime tied to this struct
     inner: *const dbcppp_Network,
-    /// This field can be used to query the schema of data that will be generated when a can frame is processed
-    pub dbc: Dbc,
+    dbc: Dbc,
     message_processors: HashMap<u64, MessageProcessor>,
 }
 
@@ -42,10 +41,18 @@ impl CanProcessor {
         })
     }
 
-    pub fn decode_frame(&self, id: u64, payload: &[u8]) -> Result<HashMap<String, CanValue>> {
+    pub fn decode_frame(&self, id: u64, payload: &[u8]) -> Result<CanResult> {
         let msg = self.message_processors.get(&id)
             .ok_or(Error::msg("Invalid can id"))?;
-        msg.parse_frame(payload)
+        Ok(CanResult {
+            message_name: msg.inner.name.as_str(),
+            signals: msg.parse_frame(payload)?,
+        })
+    }
+
+    /// You can use it to query the schema of data that will be returned when a CAN frame is parsed
+    pub fn schema(&self) -> &Dbc {
+        &self.dbc
     }
 }
 
@@ -66,25 +73,35 @@ impl MessageProcessor {
         })
     }
 
-    pub fn parse_frame(&self, payload: &[u8]) -> Result<HashMap<String, CanValue>> {
+    pub fn parse_frame(&self, payload: &[u8]) -> Result<HashMap<&str, SignalValue>> {
         if self.inner.payload_size > payload.len() as _ {
             return Err(Error::msg(format!("payload size ({}) is smaller than the message size ({})", payload.len(), self.inner.payload_size)));
         }
 
         let mut result = HashMap::new();
         for sig in self.inner.signals.iter() {
+            let mut to_insert = false;
             if sig.mux_flag != SignalMuxFlag::Value {
-                result.insert(sig.name.clone(), sig.decode(payload));
+                to_insert = true;
             } else if self.inner.mux_sig.is_some()
                 && sig.ex_mux_parent.is_none()
-                && self.inner.mux_sig.as_ref().unwrap().decode(payload) == sig.mux_value
+                && self.inner.mux_sig.as_ref().unwrap().decode_raw(payload) == sig.mux_value
             {
-                result.insert(sig.name.clone(), sig.decode(payload));
+                to_insert = true;
             } else {
-                // TODO: decode ex mux
                 if self.all_multiplexers_valid(sig, payload) {
-                    result.insert(sig.name.clone(), sig.decode(payload));
+                    to_insert = true;
                 }
+            }
+            if to_insert {
+                let raw = sig.decode_raw(payload);
+                result.insert(sig.name.as_str(), SignalValue {
+                    raw,
+                    phys: sig.raw_to_phys(raw),
+                    enum_repr: sig.enum_map.get(&raw)
+                        .map(|s| s.as_str()),
+                    unit: sig.unit.as_str(),
+                });
             }
         }
         Ok(result)
@@ -101,7 +118,7 @@ impl MessageProcessor {
                         return false;
                     }
                     Some(par_sig) => {
-                        let par_value = par_sig.decode(payload);
+                        let par_value = par_sig.decode_raw(payload);
                         for range in par_info.ranges.iter() {
                             if par_value >= range.from && par_value <= range.to {
                                 if par_sig.ex_mux_parent.is_some() {
@@ -121,4 +138,16 @@ impl MessageProcessor {
     }
 }
 
-type CanValue = u64;
+#[derive(Debug, Clone)]
+pub struct CanResult<'a> {
+    pub message_name: &'a str,
+    pub signals: HashMap<&'a str, SignalValue<'a>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SignalValue<'a> {
+    pub raw: u64,
+    pub phys: f64,
+    pub enum_repr: Option<&'a str>,
+    pub unit: &'a str,
+}

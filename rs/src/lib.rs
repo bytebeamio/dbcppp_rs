@@ -11,6 +11,8 @@ pub mod dbc;
 pub mod message_processor;
 pub mod decision_tree;
 
+pub const BOTTOM_29_BITS: u64 = 0x1fffffff;
+
 pub struct CanProcessor {
     /// lifetime tied to this struct
     inner: *const dbcppp_Network,
@@ -30,7 +32,7 @@ impl CanProcessor {
         let mut message_processors = HashMap::new();
         for msg in dbc.messages.iter() {
             message_processors.insert(
-                msg.id,
+                msg.id & BOTTOM_29_BITS,
                 MessageProcessor::new(msg.clone())
                     .context(format!("Failed to initialize processor for message: {:?} | {}", msg.name, msg.id))?,
             );
@@ -44,7 +46,7 @@ impl CanProcessor {
     }
 
     pub fn decode_frame(&self, id: u64, payload: &[u8]) -> Result<CanResult> {
-        let msg = self.message_processors.get(&id)
+        let msg = self.message_processors.get(&(id & BOTTOM_29_BITS))
             .ok_or(Error::msg("Invalid can id"))?;
         Ok(msg.parse_frame(payload)?)
     }

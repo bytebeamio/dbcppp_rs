@@ -9,3 +9,6 @@ edition = "2021"
 bitfield = "0.14.0"
 anyhow = "1.0.61"
 dbcppp_rs_sys = { path = "../rs_sys" }
+
+[dev-dependencies]
+random = "0.12.2"

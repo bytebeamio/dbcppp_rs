@@ -28,9 +28,7 @@ pub struct Decision {
 }
 
 pub fn create_decision_tree(msg: &Message) -> Result<DecisionTree> {
-    let extended_mux = msg.signals.iter().find(|sig| sig.ex_mux_parent.is_some()).is_some();
-
-    if extended_mux {
+    if msg.is_ex_mux {
         create_extended_decision_tree(msg)
     } else {
         create_simple_decision_tree(msg)

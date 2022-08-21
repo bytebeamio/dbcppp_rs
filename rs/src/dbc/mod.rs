@@ -16,6 +16,7 @@ pub struct Message {
     pub signals: Vec<Signal>,
     pub payload_size: u64,
     pub mux_sig: Option<Signal>,
+    pub is_ex_mux: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -93,12 +94,19 @@ impl Message {
                 signals.push(sig);
             }
 
+            let is_ex_mux = signals.iter().find(|sig| sig.ex_mux_parent.is_some()).is_some();
+
+            if !is_ex_mux && mux_sig.is_none() {
+                return Err(Error::msg(format!("Message({name}) has no extended multiplexing info and no multiplexor signal")));
+            }
+
             Ok(Message {
                 id,
                 name,
                 payload_size,
                 signals,
                 mux_sig,
+                is_ex_mux,
             })
         }
     }

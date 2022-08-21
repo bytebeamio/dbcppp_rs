@@ -13,7 +13,7 @@ unsafe fn f() {
     dbg!(dbc.decode_frame(2348873389, vec![
         0x01,
         0x01,
-        0x01,
+        0x02,
         0x42,
         0x9e,
         0x00,

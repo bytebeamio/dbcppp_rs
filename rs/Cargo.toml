@@ -12,3 +12,6 @@ dbcppp_rs_sys = { path = "../rs_sys" }
 
 [dev-dependencies]
 random = "0.12.2"
+rand = "0.8.5"
+lazy_static = "1.4.0"
+encoding = "0.2.33"

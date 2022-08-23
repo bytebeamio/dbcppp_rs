@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::CString;
 use dbcppp_rs_sys::*;
-use anyhow::{Context, Error, Result};
+use anyhow::{Error, Result};
 use crate::dbc::{Dbc, Message, Signal, SignalMuxFlag};
 use crate::message_processor::MessageProcessor;
 use crate::utils::{LocationContext, TryToString};

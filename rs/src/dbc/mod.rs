@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::ptr::null;
-use anyhow::{Context, Error, Result};
+use anyhow::{Error, Result};
 use dbcppp_rs_sys::*;
 use crate::dbc::cycles::find_cycle;
 use crate::{LocationContext, TryToString};

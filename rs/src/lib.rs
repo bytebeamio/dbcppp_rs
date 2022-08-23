@@ -4,8 +4,9 @@ use dbcppp_rs_sys::*;
 use anyhow::{Context, Error, Result};
 use crate::dbc::{Dbc, Message, Signal, SignalMuxFlag};
 use crate::message_processor::MessageProcessor;
-use crate::utils::TryToString;
+use crate::utils::{LocationContext, TryToString};
 
+#[macro_use]
 pub mod utils;
 pub mod dbc;
 pub mod message_processor;
@@ -34,7 +35,7 @@ impl CanProcessor {
             message_processors.insert(
                 msg.id & BOTTOM_29_BITS,
                 MessageProcessor::new(msg.clone())
-                    .context(format!("Failed to initialize processor for message: {:?} | {}", msg.name, msg.id))?,
+                    .loc_context(here!(), format!("Failed to initialize processor for message: {:?} | {}", msg.name, msg.id))?,
             );
         }
 

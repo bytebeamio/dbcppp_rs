@@ -3,7 +3,7 @@ use std::ptr::null;
 use anyhow::{Context, Error, Result};
 use dbcppp_rs_sys::*;
 use crate::dbc::cycles::find_cycle;
-use crate::TryToString;
+use crate::{LocationContext, TryToString};
 
 mod cycles;
 
@@ -58,7 +58,7 @@ impl Dbc {
                 }
 
                 messages.push(Message::new(msg)
-                    .with_context(|| format!("message #{idx} is invalid"))?);
+                    .with_loc_context(here!(), || format!("message #{idx} is invalid"))?);
             }
 
             Ok(Dbc {
@@ -74,7 +74,7 @@ impl Message {
         unsafe {
             let id = dbcppp_MessageId(raw);
             let name = dbcppp_MessageName(raw).try_to_string()
-                .with_context(|| format!("Message({id}): invalid name"))?;
+                .with_loc_context(here!(), || format!("Message({id}): invalid name"))?;
             let payload_size = dbcppp_MessageMessageSize(raw);
 
             let mut mux_sig = None;
@@ -89,7 +89,7 @@ impl Message {
                 }
 
                 let sig = Signal::new(sig)
-                    .with_context(|| format!("signal #{idx} is invalid"))?;
+                    .with_loc_context(here!(), || format!("signal #{idx} is invalid"))?;
 
                 match sig.mux_flag {
                     SignalMuxFlag::Switch => {
@@ -142,13 +142,13 @@ impl Signal {
         unsafe {
             let name = dbcppp_SignalName(raw)
                 .try_to_string()
-                .context("invalid name")?;
+                .loc_context(here!(), "invalid name")?;
             let unit = dbcppp_SignalUnit(raw)
                 .try_to_string()
-                .context("invalid unit")?;
+                .loc_context(here!(), "invalid unit")?;
             let comment = dbcppp_SignalComment(raw)
                 .try_to_string()
-                .context("invalid comment")?;
+                .loc_context(here!(), "invalid comment")?;
 
             let mut enum_map = HashMap::new();
             for idx in 0..dbcppp_SignalValueEncodingDescriptions_Size(raw) {
@@ -159,7 +159,7 @@ impl Signal {
                 let value = dbcppp_ValueEncodingDescriptionValue(desc);
                 let name = dbcppp_ValueEncodingDescriptionDescription(desc)
                     .try_to_string()
-                    .with_context(|| format!("invalid signal({name})"))?;
+                    .with_loc_context(here!(), || format!("invalid signal({name})"))?;
                 enum_map.insert(value, name);
             }
 
@@ -178,7 +178,7 @@ impl Signal {
             } else if ex_mux_count == 1 {
                 let mux_parent = dbcppp_SignalMultiplexerValues_Get(raw, 0);
                 let switch = dbcppp_SignalMultiplexerValue_SwitchName(mux_parent).try_to_string()
-                    .with_context(|| format!("invalid signal({name})"))?;
+                    .with_loc_context(here!(), || format!("invalid signal({name})"))?;
                 let ranges_count = dbcppp_SignalMultiplexerValue_ValueRanges_Size(mux_parent);
                 let mut ranges = Vec::with_capacity(ranges_count as _);
                 for idx in 0..ranges_count {

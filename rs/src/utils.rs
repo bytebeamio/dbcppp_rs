@@ -1,7 +1,8 @@
 #![allow(unused_macros)]
 use std::ffi::{CStr, CString};
+use std::fmt::Display;
 use std::os::raw::c_char;
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 pub trait TryToString {
     fn try_to_string(&self) -> Result<String>;
@@ -39,5 +40,42 @@ macro_rules! time {
         println!("{:?}", start.elapsed());
         result
     }}
+}
+
+macro_rules! here {
+    () => ({
+        format!("{}:{}:{}", file!(), line!(), column!())
+    })
+}
+
+pub trait LocationContext<T> {
+    /// Wrap the error value with additional context.
+    fn loc_context<C>(self, loc: String, context: C) -> Result<T>
+        where
+            C: Display;
+
+    /// Wrap the error value with additional context that is evaluated lazily
+    /// only once an error does occur.
+    fn with_loc_context<C, F>(self, loc: String, f: F) -> Result<T>
+        where
+            C: Display,
+            F: FnOnce() -> C;
+}
+
+impl<T> LocationContext<T> for Result<T> {
+    fn loc_context<C>(self, loc: String, context: C) -> Result<T>
+        where
+            C: Display,
+    {
+        self.context(format!("{} {}", loc, context))
+    }
+
+    fn with_loc_context<C, F>(self, loc: String, context: F) -> Result<T>
+        where
+            C: Display,
+            F: FnOnce() -> C,
+    {
+        self.with_context(|| format!("{} {}", loc, context()))
+    }
 }
 

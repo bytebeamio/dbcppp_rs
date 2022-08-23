@@ -2,16 +2,20 @@
 use std::ffi::{CStr, CString};
 use std::fmt::Display;
 use std::os::raw::c_char;
-use anyhow::{Context, Result};
+use std::ptr::null;
+use anyhow::{Context, Error, Result};
 
 pub trait TryToString {
-    fn try_to_string(&self) -> Result<String>;
+    fn try_to_string(self) -> Result<String>;
 }
 
 impl TryToString for *const c_char {
-    fn try_to_string(&self) -> Result<String> {
+    fn try_to_string(self) -> Result<String> {
+        if self == null() {
+            return Err(Error::msg("string is null"));
+        }
         unsafe {
-            Ok(CStr::from_ptr(*self).to_str()?.to_string())
+            Ok(CStr::from_ptr(self).to_str()?.to_string())
         }
     }
 }

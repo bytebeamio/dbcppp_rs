@@ -1,9 +1,7 @@
-use std::fs::read;
-use dbcppp_rs::{CanProcessor, load_dbc_file};
+use std::os::raw::c_char;
+use std::ptr::null;
+use dbcppp_rs::utils::TryToString;
 
 fn main() {
-    let dbc = CanProcessor::from_dbc(
-        load_dbc_file(read("rs/tests/dbcs/cycles.dbc").unwrap().as_slice()).unwrap().as_str()
-    ).unwrap();
-    dbg!(dbc.schema());
+    dbg!(null::<c_char>().try_to_string().unwrap());
 }

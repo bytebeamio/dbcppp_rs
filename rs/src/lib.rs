@@ -63,6 +63,26 @@ impl Drop for CanProcessor {
     }
 }
 
+/// Dbc files can be in a multitude of encodings
+/// use this function to load them into a rust utf-8 string
+pub fn load_dbc_file(data: &[u8]) -> Result<String> {
+    use encoding::{DecoderTrap, Encoding};
+
+    let encodings = [
+        Box::new(encoding::all::UTF_8 as &dyn Encoding),
+        Box::new(encoding::all::UTF_16BE as &dyn Encoding),
+        Box::new(encoding::all::UTF_16LE as &dyn Encoding),
+        Box::new(encoding::all::ISO_8859_1 as &dyn Encoding),
+    ];
+    for enc in encodings {
+        if let Ok(res) = enc.decode(data, DecoderTrap::Strict) {
+            return Ok(res);
+        }
+    }
+
+    return Err(Error::msg("unknown encoding"));
+}
+
 #[derive(Debug, Clone)]
 pub struct CanResult<'a> {
     pub message_name: &'a str,

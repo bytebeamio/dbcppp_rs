@@ -1,3 +1,5 @@
+extern crate core;
+
 mod utils;
 
 use std::collections::HashMap;

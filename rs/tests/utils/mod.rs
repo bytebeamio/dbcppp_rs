@@ -1,21 +1,13 @@
-use encoding::{DecoderTrap, Encoding};
+use anyhow::Context;
 use rand::rngs::StdRng;
 use crate::RngCore;
 
 pub fn load_dbc_file(name: &str) -> String {
     let path = format!("tests/dbcs/{name}");
     let data = std::fs::read(path.as_str()).unwrap();
-    let encodings = [
-        Box::new(encoding::all::UTF_8 as &dyn Encoding),
-        Box::new(encoding::all::UTF_16BE as &dyn Encoding),
-        Box::new(encoding::all::UTF_16LE as &dyn Encoding),
-    ];
-    for enc in encodings {
-        if let Ok(res) = enc.decode(data.as_slice(), DecoderTrap::Strict) {
-            return res;
-        }
-    }
-    panic!("file {path} has invalid encoding");
+    dbcppp_rs::load_dbc_file(data.as_slice())
+        .context(path)
+        .unwrap()
 }
 
 const fn gen_seed() -> [u8; 32] {

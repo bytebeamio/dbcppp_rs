@@ -92,9 +92,8 @@ fn simple_multiplexing() {
     }
 }
 
-#[test]
-fn extended_multiplexing_cycles() {
-    let text = load_dbc_file("cycles.dbc");
+fn test_mux_cycles(name: &str) {
+    let text = load_dbc_file(name);
     match CanProcessor::from_dbc(text.as_str()) {
         Ok(_) => {
             panic!("should've gotten an error");
@@ -103,4 +102,14 @@ fn extended_multiplexing_cycles() {
             println!("{:?}", e);
         }
     }
+}
+
+#[test]
+fn extended_multiplexing_cycles_1() {
+    test_mux_cycles("cycles1.dbc");
+}
+
+#[test]
+fn extended_multiplexing_cycles_2() {
+    test_mux_cycles("cycles2.dbc");
 }

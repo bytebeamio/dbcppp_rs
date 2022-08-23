@@ -7,9 +7,9 @@ pub struct MessageProcessor {
 }
 
 impl MessageProcessor {
-    pub(crate) fn new(inner: Message) -> Result<MessageProcessor> {
+    pub(crate) fn new(msg: &Message) -> Result<MessageProcessor> {
         Ok(MessageProcessor {
-            inner
+            inner: msg.clone()
         })
     }
 

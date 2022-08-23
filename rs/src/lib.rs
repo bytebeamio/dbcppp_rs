@@ -34,7 +34,7 @@ impl CanProcessor {
         for msg in dbc.messages.iter() {
             message_processors.insert(
                 msg.id & BOTTOM_29_BITS,
-                MessageProcessor::new(msg.clone())
+                MessageProcessor::new(msg)
                     .loc_context(here!(), format!("Failed to initialize processor for message: {:?} | {}", msg.name, msg.id))?,
             );
         }

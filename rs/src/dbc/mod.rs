@@ -2,7 +2,10 @@ use std::collections::HashMap;
 use std::ptr::null;
 use anyhow::{Context, Error, Result};
 use dbcppp_rs_sys::*;
+use crate::dbc::cycles::find_cycle;
 use crate::TryToString;
+
+mod cycles;
 
 #[derive(Debug, Clone)]
 pub struct Dbc {
@@ -75,6 +78,7 @@ impl Message {
             let payload_size = dbcppp_MessageMessageSize(raw);
 
             let mut mux_sig = None;
+            let mut has_muxed_sigs = false;
 
             let signals_count = dbcppp_MessageSignals_Size(raw);
             let mut signals = Vec::with_capacity(signals_count as _);
@@ -87,6 +91,15 @@ impl Message {
                 let sig = Signal::new(sig)
                     .with_context(|| format!("signal #{idx} is invalid"))?;
 
+                match sig.mux_flag {
+                    SignalMuxFlag::Switch => {
+                        mux_sig = Some(sig.clone());
+                    }
+                    SignalMuxFlag::Value => {
+                        has_muxed_sigs = true;
+                    }
+                    SignalMuxFlag::NoMux => {}
+                }
                 if sig.mux_flag == SignalMuxFlag::Switch {
                     mux_sig = Some(sig.clone());
                 }
@@ -94,10 +107,22 @@ impl Message {
                 signals.push(sig);
             }
 
+            for sig in signals.iter() {
+                if let Some(ExMuxInfo { switch, .. }) = sig.ex_mux_parent.as_ref() {
+                    if signals.iter().find(|s| &s.name == switch).is_none() {
+                        return Err(Error::msg(format!("Signal({}) has an invalid multiplexer switch: {}", sig.name, switch)));
+                    }
+                }
+            }
+
             let is_ex_mux = signals.iter().find(|sig| sig.ex_mux_parent.is_some()).is_some();
 
-            if !is_ex_mux && mux_sig.is_none() {
-                return Err(Error::msg(format!("Message({name}) has no extended multiplexing info and no multiplexor signal")));
+            if !is_ex_mux && has_muxed_sigs && mux_sig.is_none() {
+                return Err(Error::msg(format!("Message({name}) has no extended multiplexing info and no multiplexor signal for multiplexed signals")));
+            }
+
+            if let Some(cycle) = find_cycle(signals.as_slice()) {
+                return Err(Error::msg(format!("found cycle in extended multiplexing specification: {:?}", cycle)));
             }
 
             Ok(Message {

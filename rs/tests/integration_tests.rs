@@ -89,3 +89,16 @@ fn simple_multiplexing() {
         assert_eq!(expected, signals, "index: {}\npayload: {:?}", idx, payload);
     }
 }
+
+#[test]
+fn extended_multiplexing_cycles() {
+    let text = load_dbc_file("cycles.dbc");
+    match CanProcessor::from_dbc(text.as_str()) {
+        Ok(_) => {
+            panic!("should've gotten an error");
+        }
+        Err(e) => {
+            println!("{:?}", e);
+        }
+    }
+}

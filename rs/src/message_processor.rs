@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::{CanResult, Message, Signal, SignalMuxFlag, SignalValue};
 use anyhow::{Result, Error};
 
+#[derive(Debug)]
 pub struct MessageProcessor {
     inner: Message,
 }

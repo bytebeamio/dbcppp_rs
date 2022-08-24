@@ -110,7 +110,7 @@ impl Message {
             for sig in signals.iter() {
                 if let Some(ExMuxInfo { switch, .. }) = sig.ex_mux_parent.as_ref() {
                     if signals.iter().find(|s| &s.name == switch).is_none() {
-                        return Err(Error::msg(format!("Signal({}) has an invalid multiplexer switch: {}", sig.name, switch)));
+                        return Err(Error::msg(format!("Signal({}) has an invalid multiplexer switch: {:?}", sig.name, switch)));
                     }
                 }
             }

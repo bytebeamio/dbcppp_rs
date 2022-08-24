@@ -14,6 +14,7 @@ pub mod decision_tree;
 
 pub const BOTTOM_29_BITS: u64 = 0x1fffffff;
 
+#[derive(Debug)]
 pub struct CanProcessor {
     /// lifetime tied to this struct
     inner: *const dbcppp_Network,

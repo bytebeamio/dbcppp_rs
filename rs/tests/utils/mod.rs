@@ -1,6 +1,7 @@
 use anyhow::Context;
+use rand::RngCore;
 use rand::rngs::StdRng;
-use crate::RngCore;
+use dbcppp_rs::CanProcessor;
 
 pub fn load_dbc_file(name: &str) -> String {
     let path = format!("tests/dbcs/{name}");
@@ -34,3 +35,18 @@ impl RngHelper for StdRng {
 pub fn sequential<T: Ord>(n1: T, n2: T, n3: T) -> bool {
     n2 >= n1 && n3 >= n2
 }
+
+pub fn test_error_in_file(file: &str, error_text: &str) {
+    let text = load_dbc_file(file);
+    match CanProcessor::from_dbc(text.as_str()) {
+        Ok(dbc) => {
+            panic!("should've gotten an error, instead got following result:\n{:#?}", dbc);
+        }
+        Err(e) => {
+            if !format!("{:?}", e).contains(error_text) {
+                panic!("Wrong error:\n{:?}", e);
+            }
+        }
+    }
+}
+

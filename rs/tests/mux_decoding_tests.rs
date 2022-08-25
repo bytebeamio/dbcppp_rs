@@ -3,13 +3,14 @@ extern crate core;
 mod utils;
 
 use std::collections::HashMap;
-use rand::{RngCore, SeedableRng};
+use rand::SeedableRng;
 use dbcppp_rs::CanProcessor;
-use crate::utils::{load_dbc_file, RngHelper, SEED, sequential};
+use crate::utils::{load_dbc_file, RngHelper, sequential, u64_to_seed};
 
 #[test]
 fn extended_multiplexing() {
-    let mut r = rand::rngs::StdRng::from_seed(SEED);
+    let r0 = rand::random::<u64>();
+    let mut r = rand::rngs::StdRng::from_seed(u64_to_seed(r0));
     let processor = CanProcessor::from_dbc(load_dbc_file("test1.dbc").as_str()).unwrap();
     let message_id = 2348873389;
     for idx in 0..100000 {
@@ -47,13 +48,14 @@ fn extended_multiplexing() {
         let signals = result.signals.iter()
             .map(|(&k, v)| (k, v.raw))
             .collect::<HashMap<_, _>>();
-        assert_eq!(expected, signals, "index: {}\npayload: {:?}", idx, payload);
+        assert_eq!(expected, signals, "seed: {}\nindex: {}\npayload: {:?}", r0, idx, payload);
     }
 }
 
 #[test]
 fn simple_multiplexing() {
-    let mut r = rand::rngs::StdRng::from_seed(SEED);
+    let r0 = rand::random::<u64>();
+    let mut r = rand::rngs::StdRng::from_seed(u64_to_seed(r0));
     let processor = CanProcessor::from_dbc(load_dbc_file("test1.dbc").as_str()).unwrap();
     let message_id = 2348941054;
     for idx in 0..100000 {
@@ -88,6 +90,6 @@ fn simple_multiplexing() {
         let signals = result.signals.iter()
             .map(|(&k, v)| (k, v.raw))
             .collect::<HashMap<_, _>>();
-        assert_eq!(expected, signals, "index: {}\npayload: {:?}", idx, payload);
+        assert_eq!(expected, signals, "seed: {}\nindex: {}\npayload: {:?}", r0, idx, payload);
     }
 }

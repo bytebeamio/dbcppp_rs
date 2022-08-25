@@ -1,3 +1,4 @@
+#![allow(unused)]
 use anyhow::Context;
 use rand::RngCore;
 use rand::rngs::StdRng;
@@ -11,16 +12,16 @@ pub fn load_dbc_file(name: &str) -> String {
         .unwrap()
 }
 
-const fn gen_seed() -> [u8; 32] {
-    let mut res = [0u8; 32];
-    res[0] = 0xca;
-    res[1] = 0xfe;
-    res[2] = 0xba;
-    res[3] = 0xbe;
-    res
+lazy_static::lazy_static! {
+    pub static ref SEED: [u8; 32] = u64_to_seed(0xcafebabe);
 }
 
-pub const SEED: [u8; 32] = gen_seed();
+pub fn u64_to_seed(n: u64) -> [u8; 32] {
+    let mut res = [0u8; 32];
+    let mut u64_view = unsafe { std::slice::from_raw_parts_mut(res.as_mut_ptr() as *mut u64, 4) };
+    u64_view[0] = n;
+    res
+}
 
 pub trait RngHelper {
     fn next_u8(&mut self) -> u8;

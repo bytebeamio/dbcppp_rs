@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::ffi::CString;
+use std::ptr::null;
 use dbcppp_rs_sys::*;
 use anyhow::{Error, Result};
 use crate::dbc::{Dbc, Message, Signal, SignalMuxFlag};
@@ -29,6 +30,9 @@ impl CanProcessor {
         let inner = unsafe {
             dbcppp_NetworkLoadDBCFromMemory(CString::new(dbc)?.as_ptr())
         };
+        if inner == null() {
+            return Err(Error::msg("DBC file is invalid"));
+        }
         let dbc = Dbc::new(inner)?;
 
         let mut message_processors = HashMap::new();
@@ -71,10 +75,8 @@ pub fn load_dbc_file(data: &[u8]) -> Result<String> {
     use encoding::{DecoderTrap, Encoding};
 
     let encodings = [
-        Box::new(encoding::all::UTF_8 as &dyn Encoding),
-        Box::new(encoding::all::UTF_16BE as &dyn Encoding),
-        Box::new(encoding::all::UTF_16LE as &dyn Encoding),
         Box::new(encoding::all::ISO_8859_1 as &dyn Encoding),
+        Box::new(encoding::all::UTF_8 as &dyn Encoding),
     ];
     for enc in encodings {
         if let Ok(res) = enc.decode(data, DecoderTrap::Strict) {

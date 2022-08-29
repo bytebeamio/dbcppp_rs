@@ -77,6 +77,8 @@ pub fn load_dbc_file(data: &[u8]) -> Result<String> {
     let encodings = [
         Box::new(encoding::all::ISO_8859_1 as &dyn Encoding),
         Box::new(encoding::all::UTF_8 as &dyn Encoding),
+        Box::new(encoding::all::UTF_16LE as &dyn Encoding),
+        Box::new(encoding::all::UTF_16BE as &dyn Encoding),
     ];
     for enc in encodings {
         if let Ok(res) = enc.decode(data, DecoderTrap::Strict) {
